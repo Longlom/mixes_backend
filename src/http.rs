@@ -48,56 +48,44 @@ pub struct JsonBody {
 }
 #[derive(Debug)]
 pub struct Http {
-   pub headers: HttpHeader,
-   pub body: JsonBody,
+    pub headers: HttpHeader,
+    pub body: JsonBody,
 }
 
 impl Http {
     pub fn parse(stream: &mut TcpStream) -> Http {
-        stream.flush().unwrap();
         let mut buf_reader = BufReader::new(stream);
+        stream.flush().unwrap();
+
         let mut hash_map: HashMap<String, String> = HashMap::new();
-        let mut is_next_body = false;
+        let mut is_body_next = false;
         for (i, req_line) in buf_reader.lines().enumerate() {
-            if i == 0 {
-                hash_map.insert(String::from("method"), req_line.unwrap());
-            } else if req_line.as_ref().unwrap() == "" {
-                is_next_body = true;
-                println!("")
-                // break;
-            } else if is_next_body {
-                hash_map.insert(String::from("data"), req_line.unwrap());
-                break;
-            } else {
-                let line = req_line.unwrap();
-                let key_value: Vec<&str> = line.split(": ").collect();
-                hash_map.insert(
-                    key_value[0].clone().to_string(),
-                    key_value[1].clone().to_string(),
-                );
+            let line = req_line.unwrap();
+            let key_value: Vec<&str> = line.split(": ").collect();
+            println!("line - {line}");
+            match (key_value.len(), i, line.as_str(), is_body_next) {
+                (1, 0, _, _) => {
+                    hash_map.insert(String::from("method"), line);
+                }
+                (1, _, "", false) => {
+                    is_body_next = true
+                }
+                (_, _, _, true) => {
+                    hash_map.insert(String::from("body"), line);
+                    break;
+                }
+                (_, _, _, _) => {
+                    hash_map.insert(
+                        key_value[0].to_string(),
+                        key_value[1].to_string(),
+                    );
+                }
             }
         }
-
-        // println!("hash_map - {:?} ", hash_map);
+    
         let headers = HttpHeader::new(&hash_map);
         let body: JsonBody = serde_json::from_str(hash_map.get("data").unwrap()).unwrap();
 
-        Http {
-            headers,
-            body
-        }
-        // println!(
-        //     "hash_map.get.unwrap().parse::<u64>().unwrap() - {:?} ",
-        //     hash_map
-        //         .get("Content-Length")
-        //         .unwrap()
-        //         .parse::<u64>()
-        //         .unwrap()
-        // );
-        // let body: JsonValue;
-        // let mut buf_reader_iter = buf_reader.lines();
-        // // while let Some(http_line) = buf_reader_iter.next() {
-        // //     if http_line.unwrap().as_str().contains("")
-        // // }
+        Http { headers, body }
     }
 }
