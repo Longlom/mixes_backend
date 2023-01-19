@@ -1,11 +1,7 @@
 use std::{
-    collections::HashMap,
-    io::{BufRead, BufReader, Read, Write},
-    net::{TcpStream, Shutdown},
     sync::{mpsc, Arc, Mutex},
     thread,
 };
-
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
